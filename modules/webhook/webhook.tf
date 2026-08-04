@@ -87,9 +87,9 @@ module "direct" {
     api_gw_source_arn                     = "${aws_apigatewayv2_api.webhook.execution_arn}/*/*/${local.webhook_endpoint}"
     ssm_parameter_runner_matcher_config = [
       for p in aws_ssm_parameter.runner_matcher_config : {
-        name    = nonsensitive(p.name)
-        arn     = nonsensitive(p.arn)
-        version = nonsensitive(p.version)
+        name    = p.name
+        arn     = p.arn
+        version = p.version
       }
     ]
   }
@@ -130,9 +130,9 @@ module "eventbridge" {
     api_gw_source_arn                     = "${aws_apigatewayv2_api.webhook.execution_arn}/*/*/${local.webhook_endpoint}"
     ssm_parameter_runner_matcher_config = [
       for p in aws_ssm_parameter.runner_matcher_config : {
-        name    = nonsensitive(p.name)
-        arn     = nonsensitive(p.arn)
-        version = nonsensitive(p.version)
+        name    = p.name
+        arn     = p.arn
+        version = p.version
       }
     ]
     accept_events = var.eventbridge.accept_events
