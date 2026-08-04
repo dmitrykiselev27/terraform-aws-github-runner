@@ -61,49 +61,16 @@ resource "aws_lambda_permission" "job_retry" {
 }
 
 resource "aws_iam_role_policy" "job_retry" {
-  name   = "job_retry-policy"
-  role   = module.job_retry.lambda.role.name
-  policy = data.aws_iam_policy_document.job_retry.json
-}
-
-data "aws_iam_policy_document" "job_retry" {
-  dynamic "statement" {
-    for_each = length(compact([
-      var.config.github_app_parameters.id.arn,
-      var.config.github_app_parameters.key_base64.arn,
-      try(var.config.enterprise_pat_parameter.arn, ""),
-    ])) > 0 ? [1] : []
-    content {
-      effect  = "Allow"
-      actions = ["ssm:GetParameter", "ssm:GetParameters"]
-      resources = compact([
-        var.config.github_app_parameters.id.arn,
-        var.config.github_app_parameters.key_base64.arn,
-        try(var.config.enterprise_pat_parameter.arn, ""),
-      ])
-    }
-  }
-
-  statement {
-    effect    = "Allow"
-    actions   = ["sqs:ReceiveMessage", "sqs:GetQueueAttributes", "sqs:DeleteMessage"]
-    resources = [aws_sqs_queue.job_retry_check_queue.arn]
-  }
-
-  statement {
-    effect    = "Allow"
-    actions   = ["sqs:SendMessage", "sqs:GetQueueAttributes"]
-    resources = [var.config.sqs_build_queue.arn]
-  }
-
-  dynamic "statement" {
-    for_each = var.config.kms_key_arn != null && var.config.kms_key_arn != "" ? [var.config.kms_key_arn] : []
-    content {
-      effect    = "Allow"
-      actions   = ["kms:Encrypt", "kms:Decrypt", "kms:GenerateDataKey"]
-      resources = [statement.value]
-    }
-  }
+  name = "job_retry-policy"
+  role = module.job_retry.lambda.role.name
+  policy = templatefile("${path.module}/policies/lambda.json", {
+    kms_key_arn               = var.config.kms_key_arn != null ? var.config.kms_key_arn : ""
+    sqs_build_queue_arn       = var.config.sqs_build_queue.arn
+    sqs_job_retry_queue_arn   = aws_sqs_queue.job_retry_check_queue.arn
+    github_app_id_arn         = var.config.github_app_parameters.id.arn
+    github_app_key_base64_arn = var.config.github_app_parameters.key_base64.arn
+    enterprise_pat_arn        = try(var.config.enterprise_pat_parameter.arn, "")
+  })
 }
 
 data "aws_iam_policy_document" "deny_insecure_transport" {
